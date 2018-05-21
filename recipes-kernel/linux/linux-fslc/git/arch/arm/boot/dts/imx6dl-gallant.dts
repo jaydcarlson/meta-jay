@@ -1,0 +1,704 @@
+/*
+ * Copyright 2014 Iain Paton <ipaton0@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ */
+
+/dts-v1/;
+#include "imx6dl.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	model = "Gallant";
+	compatible = "solvz,gallant", "fsl,imx6dl";
+
+	memory {
+		reg = <0x10000000 0x40000000>;
+	};
+
+	wlcore {
+		compatible = "ti,wlcore";
+		gpio = <102>;   /* The wl8 driver expects gpio to be an integer, */
+		                /* so gpio4_6 is (4-1)*32+6=102 irq property must */
+		                /* not be set as driver derives irq number from */
+		                /* gpio if no irq set */
+		
+		/* use edge irqs for suspend/resume */
+		platform-quirks = <1>;
+		
+		/* if a 12xx card is there, configure the clock to
+		WL12XX_REFCLOCK_38_XTAL */
+		board-ref-clock = <4>;
+	};
+	
+	/*
+	wlan_en_reg: fixedregulator@2 {
+		compatible = "regulator-fixed";
+		regulator-name = "wlan-en-regulator";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		
+		gpio = <&gpio4 7 0>;
+		
+		startup-delay-us = <70000>;
+		enable-active-high;
+	};
+	*/
+	
+	kim {
+	    compatible = "kim";
+	    nshutdown_gpio = <2>;  /* GPIO_2 */
+	    dev_name = "/dev/ttymxc4";
+	    flow_cntrl = <1>;
+	    baud_rate = <3000000>;
+	};
+	
+	btwilink {
+        compatible = "btwilink";
+	};
+
+
+
+	regulators {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		reg_2p5v: regulator@0 {
+			compatible = "regulator-fixed";
+			reg = <0>;
+			regulator-name = "2P5V";
+			regulator-min-microvolt = <2500000>;
+			regulator-max-microvolt = <2500000>;
+		};
+
+		reg_3p3v: regulator@1 {
+			compatible = "regulator-fixed";
+			reg = <1>;
+			regulator-name = "3P3V";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+		};
+
+		reg_usb_otg_vbus: regulator@2 {
+			compatible = "regulator-fixed";
+			reg = <2>;
+			regulator-name = "usb_otg_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio3 22 0>;
+			enable-active-high;
+		};
+	};
+
+
+	sound {
+		compatible = "fsl,imx-audio-sgtl5000";
+		model = "imx6-riotboard-sgtl5000";
+		ssi-controller = <&ssi1>;
+		audio-codec = <&codec>;
+		audio-routing =
+			"MIC_IN", "Mic Jack",
+			"Mic Jack", "Mic Bias",
+			"Headphone Jack", "HP_OUT";
+			mux-int-port = <1>;
+			mux-ext-port = <4>;
+	};
+
+	modem {
+		/* BC: This was written in anticipation that someday a driver will want something like this.  The syntax might need to change.  */
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_modem>;
+		status = "okay";
+		uart = <&uart2>;
+	};
+    
+    leds {
+        compatible = "gpio-leds";
+        pinctrl-names = "default";
+        pinctrl-0 = <&pinctrl_leds>;
+        red {
+            gpios = <&gpio4 28 0>;
+            default-state = "off";
+        };
+        green {
+            gpios = <&gpio4 20 0>;
+            linux,default-trigger = "timer";
+            default-state = "on";
+        };
+        blue {
+            gpios = <&gpio5 11 0>;
+            default-state = "off";
+        };
+    };
+    
+    buttons {
+        /* No compatible string.  These to be controlled as gpio */
+        pinctrl-names = "default";
+        pinctrl-0 = <&pinctrl_buttons>;
+    };
+    
+    mcu_pins {  /* output pins to control off-board MCU */
+        /* No compatible string.  These to be controlled as gpio */
+        pinctrl-names = "default";
+        pinctrl-0 = <&pinctrl_mcu_pins>;        /* Todo: verify that this is enough to set up the pins */
+    };
+};
+
+&audmux {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_audmux>;
+	status = "okay";
+};
+
+&epit1 {
+       status = "disabled";    /* to be used by lora_raw so don't use it for anything else */
+};
+
+&ecspi1 {
+	pinctrl-names = "default";		
+	pinctrl-0 = <&pinctrl_ecspi1>;
+    fsl,spi-num-chipselects = <2>;
+	cs-gpios = <&gpio3 26 0>,        /* radio chip select is active-low. */
+		   <&gpio4 24 0>;
+	status = "okay";
+
+	lora_radio1@0 {
+		compatible = "semtech,sx1272";
+		spi-max-frequency = <4000000>;
+		reg = <0>;				/* Use the first listed chip select. */
+		status = "okay";
+		lr-pinctrl-0 = <&pinctrl_lora_radio1>;	/* lora driver should set up these pins with these settings */
+		lr-pin_transmit = <&gpio3 23 GPIO_ACTIVE_LOW>;	/* low to transmit */
+		lr-pin_reset = <&gpio3 24 GPIO_ACTIVE_HIGH>;	/* drive high to reset, otherwise leave floating */
+		lr-interrupt = <&gpio3 25 IRQ_TYPE_EDGE_RISING>;
+		lr-timer = <&epit1>;			/* the driver for this radio uses an on-chip EPIT timer */
+	};
+
+	lora_radio2@1 {
+		compatible = "semtech,sx1272";
+		spi-max-frequency = <4000000>;
+		reg = <1>;				/* Use which of the listed chip selects */
+		status = "okay";
+		lr-pinctrl-0 = <&pinctrl_lora_radio2>;	/* lora driver should set up these pins with these settings */
+		lr-pin_transmit = <&gpio3 19 GPIO_ACTIVE_LOW>;	/* low to transmit */
+		lr-pin_reset = <&gpio5  8 GPIO_ACTIVE_HIGH>;	/* drive high to reset, otherwise leave floating */
+		lr-interrupt = <&gpio4 30 IRQ_TYPE_EDGE_RISING>;
+		lr-timer = <&epit1>;			/* the driver for this radio uses an on-chip EPIT timer */
+	};
+};
+
+&i2c1 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c1>;
+	status = "okay";
+
+	si7006@40 {
+		compatible = "si70xx";
+		reg = <0x40>;
+	};
+
+	fxos8700@1e {
+		compatible = "fxos8700";
+		reg = <0x1e>;
+	};
+
+	bmp280@76 {
+		compatible = "bmp280";
+		reg = <0x76>;
+	};
+
+       ltr303@29 {
+               compatible = "ltr303";
+               reg = <0x29>;
+       };
+
+       veml6070@38 {
+               compatible = "veml6070";
+               reg = <0x38>;
+       };
+
+       stc3115@70 {
+                compatible = "stc3115";
+                reg = <0x70>;
+        };
+
+	codec: sgtl5000@0a {
+		compatible = "fsl,sgtl5000";
+		reg = <0x0a>;
+		clocks = <&clks 201>;
+		VDDA-supply = <&reg_2p5v>;
+		VDDIO-supply = <&reg_3p3v>;
+	};
+
+	pmic: pf0100@08 {
+		compatible = "fsl,pfuze100";
+		reg = <0x08>;
+		interrupt-parent = <&gpio5>;
+		interrupts = <16 8>;
+
+		regulators {
+			reg_vddcore: sw1ab {				/* VDDARM_IN */
+				regulator-min-microvolt = <300000>;
+				regulator-max-microvolt = <1875000>;
+				regulator-always-on;
+			};
+
+			reg_vddsoc: sw1c {				/* VDDSOC_IN */
+				regulator-min-microvolt = <300000>;
+				regulator-max-microvolt = <1875000>;
+				regulator-always-on;
+			};
+
+			reg_gen_3v3: sw2 {				/* VDDHIGH_IN */
+				regulator-min-microvolt = <800000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-always-on;
+			};
+
+			reg_ddr_1v5a: sw3a {				/* NVCC_DRAM, NVCC_RGMII */
+				regulator-min-microvolt = <400000>;
+				regulator-max-microvolt = <1975000>;
+				regulator-always-on;
+			};
+
+			reg_ddr_1v5b: sw3b {				/* NVCC_DRAM, NVCC_RGMII */
+				regulator-min-microvolt = <400000>;
+				regulator-max-microvolt = <1975000>;
+				regulator-always-on;
+			};
+
+			reg_ddr_vtt: sw4 {				/* MIPI conn */
+				regulator-min-microvolt = <400000>;
+				regulator-max-microvolt = <1975000>;
+				regulator-always-on;
+			};
+
+			reg_5v_600mA: swbst {				/* not used */
+				regulator-min-microvolt = <5000000>;
+				regulator-max-microvolt = <5150000>;
+			};
+
+			reg_snvs_3v: vsnvs {				/* VDD_SNVS_IN */
+				regulator-min-microvolt = <1500000>;
+				regulator-max-microvolt = <3000000>;
+				regulator-always-on;
+			};
+
+			vref_reg: vrefddr {				/* VREF_DDR */
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			reg_vgen1_1v5: vgen1 {				/* not used */
+				regulator-min-microvolt = <800000>;
+				regulator-max-microvolt = <1550000>;
+			};
+
+			reg_vgen2_1v2_eth: vgen2 {			/* pcie ? */
+				regulator-min-microvolt = <800000>;
+				regulator-max-microvolt = <1550000>;
+				regulator-always-on;
+			};
+
+			reg_vgen3_2v8: vgen3 {				/* not used */
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <3300000>;
+			};
+			reg_vgen4_1v8: vgen4 {				/* NVCC_SD3 */
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-always-on;
+			};
+
+			reg_vgen5_2v5_sgtl: vgen5 {			/* Pwr LED & 5V0_delayed enable */
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-always-on;
+			};
+
+			reg_vgen6_3v3: vgen6 {				/* #V#_DELAYED enable, MIPI */
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-always-on;
+			};
+		};
+	};
+};
+
+
+&i2c4 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c4>;
+	clocks = <&clks 116>;
+	status = "okay";
+};
+
+/*&pwm3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm3>;
+	status = "okay";
+};
+
+&pwm4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm4>;
+	status = "okay";
+};*/
+
+
+&ssi1 {
+	status = "okay";
+};
+
+&uart1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart1>;
+	status = "okay";
+};
+
+
+&uart2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart2>;
+	status = "okay";
+	fsl,uart-has-rtscts;
+};
+/*
+&uart3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart3>;
+	status = "okay";
+};
+*/
+
+&uart4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart4 &pinctrl_gps>;
+	status = "okay";
+};
+
+&uart5 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart5>;
+	status = "okay";
+	fsl,uart-has-rtscts;
+};
+
+&usbh1 {
+	dr_mode = "host";
+	disable-over-current;
+	status = "okay";
+};
+
+&usbotg {
+	vbus-supply = <&reg_usb_otg_vbus>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usbotg>;
+	disable-over-current;
+	dr_mode = "otg";
+	status = "okay";
+};
+
+&usdhc2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usdhc2>;
+	cd-gpios = <&gpio1 4 0>;
+	wp-gpios = <&gpio1 2 0>;
+	vmmc-supply = <&reg_3p3v>;
+	status = "okay";
+	non-removable;
+};
+
+&usdhc3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usdhc3>;
+	cd-gpios = <&gpio7 0 0>;
+	vmmc-supply = <&reg_3p3v>;
+	status = "okay";
+	disable-wp;
+
+	brcmf: bcrmf@1 {
+		reg = <1>;
+		compatible = "brcm,bcm4339-fmac";
+		interrupt-parent = <&gpio4>;
+		interrupts = <10 8>;		/* 10 means pin 10 on interrupt-parent.  ? 8 means active-low, level sensitive ? */
+		interrupt-names = "host-wake";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_brcmf>;
+	};
+};
+
+&usdhc4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usdhc4>;
+	vmmc-supply = <&reg_3p3v>;
+	non-removable;
+	status = "okay";
+};
+
+&iomuxc {
+	pinctrl-names = "default";
+
+	imx6-riotboard {
+		pinctrl_audmux: audmuxgrp {
+			fsl,pins = <
+				MX6QDL_PAD_DISP0_DAT19__AUD4_RXC	0x130b0 
+				MX6QDL_PAD_DISP0_DAT20__AUD4_TXC	0x130b0 
+				MX6QDL_PAD_DISP0_DAT21__AUD4_TXD	0x110b0 
+				MX6QDL_PAD_DISP0_DAT22__AUD4_TXFS	0x130b0 
+				MX6QDL_PAD_DISP0_DAT23__AUD4_RXD	0x130b0 
+				MX6QDL_PAD_GPIO_19__CCM_CLKO1		0x130b0
+			>;
+		};
+		
+		pinctrl_brcmf: brcmfgrp {
+			fsl,pins = <
+				/* todo: not sure if these are active high or low and so  should have pull-up/downs enabled: */
+				MX6QDL_PAD_KEY_COL0__GPIO4_IO06		0x1b0b1		/* EN  */
+				MX6QDL_PAD_KEY_ROW2__GPIO4_IO11		0x1b0b1		/* IRQ */
+				MX6QDL_PAD_KEY_COL3__GPIO4_IO12		0x1b0b1		/* WAKE */
+			>;
+		};
+
+		pinctrl_buttons: buttonsgrp {
+			fsl,pins = <
+				MX6QDL_PAD_DISP0_DAT5__GPIO4_IO26	0x1f0b1		/* PROVISIONING pushbutton input (active-low). */
+			>;
+		};
+
+		pinctrl_ecspi1: ecspi1grp {
+			fsl,pins = <
+				MX6QDL_PAD_EIM_D26__GPIO3_IO26		0x100b1		/* CS0 */
+				MX6QDL_PAD_DISP0_DAT3__GPIO4_IO24	0x100b1		/* CS1 */
+				MX6QDL_PAD_DISP0_DAT0__GPIO4_IO21	0x100b1		/* CS2 */
+				MX6QDL_PAD_EIM_D16__ECSPI1_SCLK		0x100b1
+				MX6QDL_PAD_EIM_D17__ECSPI1_MISO		0x100b1
+				MX6QDL_PAD_EIM_D18__ECSPI1_MOSI		0x100b1
+			>;
+		};
+
+		pinctrl_ecspi3: ecspi3grp {
+			fsl,pins = <
+				MX6QDL_PAD_DISP0_DAT0__ECSPI3_SCLK	0x100b1
+				MX6QDL_PAD_DISP0_DAT1__ECSPI3_MOSI	0x100b1
+				MX6QDL_PAD_DISP0_DAT2__ECSPI3_MISO	0x100b1
+			>;
+		};
+
+		pinctrl_gps: gpsgrp {
+        		fsl,pins = <
+                		MX6QDL_PAD_CSI0_DAT4__GPIO5_IO22        0x1b0b1         /* GPS_ONOFF */
+                		MX6QDL_PAD_CSI0_VSYNC__GPIO5_IO21       0x1b0b1         /* GPS_RESET */
+                		MX6QDL_PAD_CSI0_PIXCLK__GPIO5_IO18      0x1b0b1         /* GPS_WAKEUP */
+                		MX6QDL_PAD_CSI0_DAT16__GPIO6_IO02       0x1f0b1         /* GPS_GPIO6 - HOST_CLK - pull-up on power-up to select UART */ 
+                		MX6QDL_PAD_CSI0_DAT17__GPIO6_IO03       0x100b1         /* GPS_GPIO7 - HOST_CS  - leave high-impedance on power-up to select UART */
+        		>;
+		};
+		pinctrl_i2c1: i2c1grp {
+			fsl,pins = <
+				MX6QDL_PAD_EIM_D21__I2C1_SCL		0x4001b8b1
+				MX6QDL_PAD_EIM_D28__I2C1_SDA		0x4001b8b1
+			>;
+		};
+
+		/*pinctrl_i2c2: i2c2grp {
+			fsl,pins = <
+				/*MX6QDL_PAD_KEY_COL3__I2C2_SCL		0x4001b8b1*/
+				/*MX6QDL_PAD_KEY_ROW3__I2C2_SDA		0x4001b8b1
+			>;
+		};*/
+
+		pinctrl_i2c3: i2c3grp {
+			fsl,pins = <
+				MX6QDL_PAD_GPIO_5__I2C3_SCL		0x4001b8b1
+				MX6QDL_PAD_GPIO_6__I2C3_SDA		0x4001b8b1
+			>;
+		};
+
+		pinctrl_i2c4: i2c4grp {
+			fsl,pins = <
+				MX6QDL_PAD_GPIO_7__I2C4_SCL             0x4001b8b1
+				MX6QDL_PAD_GPIO_8__I2C4_SDA             0x4001b8b1
+			>;
+		};
+
+		pinctrl_leds: led1grp {
+			fsl,pins = <
+				MX6QDL_PAD_DISP0_DAT7__GPIO4_IO28	0x100b1		/* LED_RED   - Red LED. Active-high.   */
+				MX6QDL_PAD_DI0_PIN4__GPIO4_IO20	    0x100b1		/* LED_GREEN - Green LED. Active-high. */
+				MX6QDL_PAD_DISP0_DAT17__GPIO5_IO11	0x100b1		/* LED_BLUE  - Blue LED. Active-high.  */
+
+/* HACK - pinctrl_buttons */
+				MX6QDL_PAD_DISP0_DAT5__GPIO4_IO26	0x1f0b1		/* PROVISIONING pushbutton input (active-low). */
+                
+/* HACK - pinctrl_mcu_pins */
+                /* these two pins use lower output drive strength in case of conflict with MCU */
+				MX6QDL_PAD_CSI0_DAT8__GPIO5_IO26	0x10089		/* MCU_BOOT  - Can be used as a GPIO pin on the K02 bootloader to trigger a reboot */
+				MX6QDL_PAD_CSI0_DAT18__GPIO6_IO04	0x10089		/* MCU_RESET - Attached to the RESET pin of the K02 MCU */
+
+/* HACK - pinctrl_modem */
+				MX6QDL_PAD_NANDF_D6__GPIO2_IO06		0x130b1		/* POWER_IND. */
+				MX6QDL_PAD_SD1_DAT0__GPIO1_IO16		0x100b1		/* CELL_POWER_EN - Output to enable Boost regulator. Drive HIGH to power CDMA module. */
+				/* Q3 and Q4 are to be bypassed and these lines to feed directly to the modem : */
+				MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x108b1		/* POWER (IGT) - open drain */
+				MX6QDL_PAD_NANDF_D4__GPIO2_IO04		0x108b1		/* EMERG_OFF   - open drain */
+
+            >;
+		};
+        
+                pinctrl_lora_radio1: lora_radio1grp {           /* pins in addition to the SPI pins */
+                        fsl,pins = <    /* Pad Name  Mux setting        Pad Control Register Value */
+                                MX6QDL_PAD_EIM_D23__GPIO3_IO23          0x100b1         /* CTX (antenna switch) */
+                                MX6QDL_PAD_EIM_D24__GPIO3_IO24          0x100b1         /* RESET */
+                                MX6QDL_PAD_EIM_D25__GPIO3_IO25          0x130b1         /* INT (DI0) */
+                        >;
+                };
+
+                pinctrl_lora_radio2: lora_radio2grp {           /* pins in addition to the SPI pins */
+                        fsl,pins = <    /* Pad Name  Mux setting        Pad Control Register Value */
+                                MX6QDL_PAD_EIM_D19__GPIO3_IO19          0x100b1         /* CTX (antenna switch) */
+                                MX6QDL_PAD_DISP0_DAT14__GPIO5_IO08      0x100b1         /* RESET */
+                                MX6QDL_PAD_DISP0_DAT9__GPIO4_IO30       0x130b1         /* INT (DI0) */
+                        >;
+                };
+
+		pinctrl_mcu_pins: mcupinsgrp {
+			fsl,pins = <
+                /* these two pins use lower output drive strength in case of conflict with MCU */
+				MX6QDL_PAD_CSI0_DAT8__GPIO5_IO26	0x10089		/* MCU_BOOT  - Can be used as a GPIO pin on the K02 bootloader to trigger a reboot */
+				MX6QDL_PAD_CSI0_DAT18__GPIO6_IO04	0x10089		/* MCU_RESET - Attached to the RESET pin of the K02 MCU */
+			>;
+		};
+
+		pinctrl_modem: modemgrp {
+	  		fsl,pins = <
+				MX6QDL_PAD_NANDF_D6__GPIO2_IO06		0x130b1		/* POWER_IND. */
+				MX6QDL_PAD_SD1_DAT0__GPIO1_IO16		0x100b1		/* CELL_POWER_EN - Output to enable Boost regulator. Drive HIGH to power CDMA module. */
+				/* Q3 and Q4 are to be bypassed and these lines to feed directly to the modem : */
+				MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x108b1		/* POWER (IGT) - open drain */
+				MX6QDL_PAD_NANDF_D4__GPIO2_IO04		0x108b1		/* EMERG_OFF   - open drain */
+			>;
+		};
+
+		pinctrl_pwm3: pwm3grp {
+			fsl,pins = <
+				MX6QDL_PAD_SD1_DAT1__PWM3_OUT		0x1b0b1
+			>;
+		};
+
+		pinctrl_pwm4: pwm4grp {
+			fsl,pins = <
+				MX6QDL_PAD_SD1_CMD__PWM4_OUT		0x1b0b1
+			>;
+		};
+
+		pinctrl_uart1: uart1grp {
+			fsl,pins = <
+				MX6QDL_PAD_SD3_DAT7__UART1_TX_DATA	0x1b0b1
+				MX6QDL_PAD_SD3_DAT6__UART1_RX_DATA	0x1b0b1
+			>;
+		};
+
+		
+		pinctrl_uart2: uart2grp {
+			fsl,pins = <
+				MX6QDL_PAD_SD4_DAT7__UART2_TX_DATA	0x1b0b1
+				MX6QDL_PAD_SD4_DAT4__UART2_RX_DATA	0x1b0b1
+				MX6QDL_PAD_SD4_DAT5__GPIO2_IO13		0x1b0b1 /* Schematic CTS mux to UART RTS */
+				MX6QDL_PAD_SD4_DAT6__UART2_CTS_B	0x1b0b1 /* Schematic RTS mux to UART CTS */
+				MX6QDL_PAD_NANDF_D0__GPIO2_IO00		0x1b0b1		/* DTR */
+				MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x1b0b1		/* DSR */
+				MX6QDL_PAD_NANDF_ALE__GPIO6_IO08	0x1b0b1		/* DCD */
+				MX6QDL_PAD_NANDF_D5__GPIO2_IO05		0x1b0b1		/* RING / INT */
+			>;
+		};
+		
+
+		/*
+		pinctrl_uart3: uart3grp {
+			fsl,pins = <
+				MX6QDL_PAD_EIM_D24__UART3_TX_DATA	0x1b0b1
+				MX6QDL_PAD_EIM_D25__UART3_RX_DATA	0x1b0b1
+			>;
+		};
+		*/
+
+		pinctrl_uart4: uart4grp {
+			fsl,pins = <
+                                MX6QDL_PAD_CSI0_DAT12__UART4_TX_DATA    0x1b0b1
+                                MX6QDL_PAD_CSI0_DAT13__UART4_RX_DATA    0x1b0b1
+			/*	MX6QDL_PAD_CSI0_DAT12__UART4_TX_DATA	0x1b0b1
+				MX6QDL_PAD_CSI0_DAT13__UART4_RX_DATA	0x1b0b1
+				MX6QDL_PAD_CSI0_DAT16__UART4_RTS_B	0x1b0b1
+				MX6QDL_PAD_CSI0_DAT17__UART4_CTS_B	0x1b0b1*/
+			>;
+		};
+
+		pinctrl_uart5: uart5grp {
+			fsl,pins = <
+				MX6QDL_PAD_KEY_COL1__UART5_TX_DATA	0x1b0b1
+				MX6QDL_PAD_KEY_ROW1__UART5_RX_DATA	0x1b0b1
+			>;
+		};
+
+		pinctrl_usbotg: usbotggrp {
+			fsl,pins = <
+				MX6QDL_PAD_ENET_RX_ER__USB_OTG_ID	0x17059
+				MX6QDL_PAD_EIM_D22__GPIO3_IO22		0x000b0	/* MX6QDL_PAD_EIM_D22__USB_OTG_PWR */
+				/*MX6QDL_PAD_EIM_D21__USB_OTG_OC		0x1b0b0*/
+			>;
+		};
+
+		pinctrl_usdhc2: usdhc2grp {
+			fsl,pins = <
+				MX6QDL_PAD_SD2_CMD__SD2_CMD		0x17059
+				MX6QDL_PAD_SD2_CLK__SD2_CLK		0x10059
+				MX6QDL_PAD_SD2_DAT0__SD2_DATA0		0x17059
+				MX6QDL_PAD_SD2_DAT1__SD2_DATA1		0x17059
+				MX6QDL_PAD_SD2_DAT2__SD2_DATA2		0x17059
+				MX6QDL_PAD_SD2_DAT3__SD2_DATA3		0x17059
+				MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x1b0b0	/* SD2 CD */
+				MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x1f0b0	/* SD2 WP */
+			>;
+		};
+
+		pinctrl_usdhc3: usdhc3grp {
+			fsl,pins = <
+				MX6QDL_PAD_SD3_CMD__SD3_CMD		0x17059
+				MX6QDL_PAD_SD3_CLK__SD3_CLK		0x10059
+				MX6QDL_PAD_SD3_DAT0__SD3_DATA0		0x17059
+				MX6QDL_PAD_SD3_DAT1__SD3_DATA1		0x17059
+				MX6QDL_PAD_SD3_DAT2__SD3_DATA2		0x17059
+				MX6QDL_PAD_SD3_DAT3__SD3_DATA3		0x17059
+				MX6QDL_PAD_SD3_DAT5__GPIO7_IO00		0x1b0b0	/* SD3 CD */
+			/*	MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x1f0b0	/* SD3 WP */
+			>;
+		};
+
+		pinctrl_usdhc4: usdhc4grp {
+			fsl,pins = <
+				MX6QDL_PAD_SD4_CMD__SD4_CMD		0x17059
+				MX6QDL_PAD_SD4_CLK__SD4_CLK		0x10059
+				MX6QDL_PAD_SD4_DAT0__SD4_DATA0		0x17059
+				MX6QDL_PAD_SD4_DAT1__SD4_DATA1		0x17059
+				MX6QDL_PAD_SD4_DAT2__SD4_DATA2		0x17059
+				MX6QDL_PAD_SD4_DAT3__SD4_DATA3		0x17059
+				/*MX6QDL_PAD_NANDF_ALE__GPIO6_IO08	0x17059	 TODO: Relocate to different pin? */ /* SD4 RST (eMMC) */
+			>;
+		};
+
+                pinctrl_wifi: wifigrp {
+                        fsl,pins = <
+                                MX6QDL_PAD_KEY_ROW0__GPIO4_IO07         0x1f0b1         /* WiFi EN */
+                                MX6QDL_PAD_KEY_COL2__GPIO4_IO10         0x170b0         /* IRQ (HOST_WAKE) */
+                        >;
+                };
+
+	};
+};

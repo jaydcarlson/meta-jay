@@ -1,0 +1,107 @@
+#!/bin/sh
+
+# Variables
+I2CBUS=0
+
+# Color selections
+red='\033[1;31m'
+green='\033[1;32m'
+blue='\033[1;34m'
+resetColor='\033[0m'
+
+# Results
+PASS=${green}PASS
+FAIL=${red}FAIL
+
+printf "${blue}TESTING FXOS8700\n"
+printf "${resetColor}Test for driver presence		"
+if [ -e /sys/bus/i2c/drivers/fxos8700 ]
+then
+	printf "$PASS\n"
+	printf "${resetColor}Test for device presence		"
+	if [ -d /sys/bus/i2c/devices/$I2CBUS-001e ]
+	then
+		printf "$PASS\n"
+		
+		printf "${resetColor}Test driver name in device		"
+		temp=`cat /sys/bus/i2c/devices/${I2CBUS}-001e/name`
+		if [ "$temp" = "fxos8700" ]
+		then
+			printf "$PASS\n"
+		else
+			printf "$FAIL\n"
+		fi
+		
+		printf "${resetColor}Test Accelerometer				 "
+		temp=`cat /sys/devices/virtual/input/input0/name`
+		if [ "$temp" = "FreescaleAccelerometer" ]
+		then
+			temp=`cat /sys/devices/virtual/input/input0/position`
+			if [[ $temp =~ ^-?[0-9]+$ ]]
+			then
+				printf "$PASS\n"
+			else
+				printf "$FAIL\n"
+			fi
+		else
+			printf "$FAIL\n"
+		fi
+
+                printf "${resetColor}Test Accelerometer events		"
+		echo 1 > /sys/devices/virtual/input/input0/enable
+                evtest /dev/input/event0 > output &
+		PID=$!
+		sleep 2
+		kill $PID
+		VAL=`cat output | tail -5`
+		xc=`echo "$VAL" | grep "(X)" | grep -o 'value.*' | sed 's/[^0-9]//g'`
+		yc=`echo "$VAL" | grep "(Y)" | grep -o 'value.*' | sed 's/[^0-9]//g'`
+		zc=`echo "$VAL" | grep "(Z)" | grep -o 'value.*' | sed 's/[^0-9]//g'`
+		if [[ "$xc" =~ ^-?[0-9]+$ ]] && [[ "$yc" =~ ^-?[0-9]+$ ]] && [[ "$zc" =~ ^-?[0-9]+$ ]]
+		then
+			printf "$PASS\n"
+		else
+			printf "$FAIL\n"
+		fi
+
+		printf "${resetColor}Test Magnetometer				 "
+		temp=`cat /sys/devices/virtual/input/input1/name`
+		if [ "$temp" = "FreescaleMagnetometer" ]
+		then
+			temp=`cat /sys/devices/virtual/input/input1/position`
+			if [[ $temp =~ ^-?[0-9]+$ ]]
+			then
+				printf "$PASS\n"
+			else
+				printf "$FAIL\n"
+			fi
+		else
+			printf "$FAIL\n"
+		fi
+
+		printf "${resetColor}Test Magnetometer events		"
+		echo 1 > /sys/devices/virtual/input/input1/enable
+		evtest /dev/input/event1 > output &
+		PID=$!
+		sleep 2
+		kill $PID
+		VAL=`cat output | tail -5`
+		xc=`echo "$VAL" | grep "(X)" | grep -o 'value.*' | sed 's/[^0-9]//g'`
+		yc=`echo "$VAL" | grep "(Y)" | grep -o 'value.*' | sed 's/[^0-9]//g'`
+		zc=`echo "$VAL" | grep "(Z)" | grep -o 'value.*' | sed 's/[^0-9]//g'`
+		if [[ "$xc" =~ ^-?[0-9]+$ ]] && [[ "$yc" =~ ^-?[0-9]+$ ]] && [[ "$zc" =~ ^-?[0-9]+$ ]]
+		then
+			printf "$PASS\n"
+		else
+			printf "$FAIL\n"
+		fi
+	else
+		printf "$FAIL\n"
+		printf "${resetColor}Due to the absence of the device, all other tests for this driver will be skipped\n"
+	fi
+else
+	printf "$FAIL\n"
+	printf "${resetColor}Due to the absence of the driver, all other tests for this driver will be skipped\n"
+fi
+
+printf "${resetColor}\n"

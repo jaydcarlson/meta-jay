@@ -1,0 +1,22 @@
+#!/bin/sh
+
+NAME=$1
+START=$2
+OPTIONS=$3
+GREP=/bin/grep
+PS=/bin/ps
+NOP=/bin/true
+DATE=/bin/date
+RM=/bin/rm
+WC=/usr/bin/wc
+
+ret=$( $PS|$GREP -v grep|$GREP -v $0|$GREP $NAME|$WC -l )
+
+if [ $ret -eq 0 ];
+then
+   $START $OPTIONS 2>&1 >/dev/null &
+   NOTICE=/var/log/solvzwatchdog.log
+   echo "$NAME was not running and was started on `$DATE`" >> $NOTICE
+fi
+
+exit

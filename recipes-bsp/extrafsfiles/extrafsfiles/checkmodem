@@ -1,0 +1,11 @@
+#!/bin/sh
+
+
+while [ 1 ] ; do 
+	ret=`/usr/local/watchdog/checkmodemconnection`
+	if [[ $ret -eq 0 ]]; then
+		/usr/local/bin/led-manager cellular connected
+		exit
+	fi
+	sleep 2
+done

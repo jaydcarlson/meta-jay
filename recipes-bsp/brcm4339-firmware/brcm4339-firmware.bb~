@@ -1,0 +1,25 @@
+DESCRIPTION = "Add firmware for bcm4339"
+LICENSE = "MIT"
+LIC_FILES_CHKSUM = "file://${THISDIR}/brcm4339-firmware/license;md5=d218b86dc92a1519dd093fe84c407d9e"
+
+PACKAGE_ARCH = "${MACHINE_ARCH}"
+
+#RCONFLICTS_linux-firmware = "brcmfmac4335-sdio.bin"
+#RREPLACES_linux-firmware  = "brcmfmac4335-sdio.bin"
+
+SRC_URI = "file://brcmfmac4335-sdio.txt \
+                file://brcmfmac4335-sdio.bin"
+
+do_compile() {
+    :
+}
+
+do_install() {
+    #install -d ${D}${base_libdir}/firmware
+    install -d ${D}${base_libdir}/firmware/brcm
+    #rm ${D}${base_libdir}/firmware/brcm/brcmfmac4335-sdio.bin
+    #cp ${WORKDIR}/brcmfmac4335-sdio.bin ${D}${base_libdir}/firmware/brcm/
+    cp ${WORKDIR}/brcmfmac4335-sdio.txt ${D}${base_libdir}/firmware/brcm/
+}
+
+FILES_${PN} = "/lib/firmware/brcm/*"

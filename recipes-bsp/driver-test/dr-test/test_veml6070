@@ -1,0 +1,55 @@
+#!/bin/sh
+
+# Variables
+I2CBUS=0
+
+# Color selections
+red='\033[1;31m'
+green='\033[1;32m'
+blue='\033[1;34m'
+resetColor='\033[0m'
+
+# Results
+PASS=${green}PASS
+FAIL=${red}FAIL
+
+
+printf "${blue}TESTING VEML6070\n"
+printf "${resetColor}Test for driver presence		"
+if [ -e /sys/bus/i2c/drivers/veml6070 ]
+then
+	printf "$PASS\n"
+	printf "${resetColor}Test for device presence		"
+	if [ -d /sys/bus/i2c/devices/$I2CBUS-0038 ]
+	then
+		printf "$PASS\n"
+		
+		printf "${resetColor}Test driver name in device		"
+		temp=`cat /sys/bus/i2c/devices/${I2CBUS}-0038/name`
+		if [ "$temp" = "veml6070" ]
+		then
+			printf "$PASS\n"
+		else
+			printf "$FAIL\n"
+		fi
+		
+		printf "${resetColor}Test illuminance Irradiance		"
+		temp=`find /sys/bus/i2c/devices/${I2CBUS}-0038/ -name 'in_illuminance_irradiance_raw' -exec cat {} \;`
+		if [[ $temp =~ ^[0-9]+(\.[0-9]+)?$ ]]
+		then
+			printf "$PASS\n"
+		else
+			printf "$FAIL\n"
+		fi
+
+	else
+		printf "$FAIL\n"
+		printf "${resetColor}Due to the absence of the device, all other tests for this driver will be skipped\n"
+	fi
+else
+	printf "$FAIL\n"
+	printf "${resetColor}Due to the absence of the driver, all other tests for this driver will be skipped\n"
+fi
+
+
+printf "${resetColor}\n"

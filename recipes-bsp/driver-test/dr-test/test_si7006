@@ -1,0 +1,71 @@
+#!/bin/sh
+
+I2CBUS=0
+
+# Color selections
+red='\033[1;31m'
+green='\033[1;32m'
+blue='\033[1;34m'
+resetColor='\033[0m'
+
+# Results
+PASS=${green}PASS
+FAIL=${red}FAIL
+
+printf "${blue}TESTING SI7006\n"
+printf "${resetColor}Test for driver presence		"
+if [ -e /sys/bus/i2c/drivers/si70xx ]
+then
+	printf "$PASS\n"
+	printf "${resetColor}Test for device presence		"
+	if [ -d /sys/bus/i2c/devices/${I2CBUS}-0040 ]
+	then
+		printf "$PASS\n"
+		
+		printf "${resetColor}Test driver name in device		"
+		temp=`cat /sys/bus/i2c/devices/${I2CBUS}-0040/name`
+		if [ "$temp" = "si70xx" ]
+		then
+			printf "$PASS\n"
+		else
+			printf "$FAIL\n"
+		fi
+		
+		printf "${resetColor}Test temperature				 "
+		temp=`find /sys/bus/i2c/devices/${I2CBUS}-0040/ -name 'temp1_input' -exec cat {} \;`
+		if [[ $temp =~ ^-?[0-9]+$ ]]
+		then
+			printf "$PASS\n"
+		else
+			printf "$FAIL\n"
+		fi
+
+		printf "${resetColor}Test critical temperature		"
+		temp=`find /sys/devices/virtual/hwmon/ -name 'temp1_crit' -exec cat {} \;`
+		if [[ $temp =~ ^-?[0-9]+$ ]]
+		then
+			printf "$PASS\n"
+		else
+			printf "$FAIL\n"
+		fi
+
+		printf "${resetColor}Test humidity					 "
+		temp=`find /sys/bus/i2c/devices/${I2CBUS}-0040/ -name 'humidity1_input' -exec cat {} \;`
+		if [[ $temp =~ ^-?[0-9]+$ ]]
+		then
+			printf "$PASS\n"
+		else
+			printf "$FAIL\n"
+		fi
+
+	else
+		printf "$FAIL\n"
+		printf "${resetColor}Due to the absence of the device, all other tests for this driver will be skipped\n"
+	fi
+else
+	printf "$FAIL\n"
+	printf "${resetColor}Due to the absence of the driver, all other tests for this driver will be skipped\n"
+fi
+
+
+printf "${resetColor}\n"

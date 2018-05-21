@@ -1,0 +1,54 @@
+#!/bin/bash
+
+GREEN="green"
+RED="red"
+BLUE="blue"
+
+usage()
+{
+  echo "USAGE: led (all|red|blue|green) (user|blink|heartbeat|fs|rc-feedback|fuelgauge-chrg-or-full|fuelgauge-chrg|fuelgauge-full|fuelgauge-chrg-blink-full-solid|mmc0|mmc1|mmc2|oneshot|backlight|gpio|rfkill) [only]"
+  exit 1
+}
+
+switch()
+{
+  echo "$2" > "/sys/class/leds/${1}/trigger"
+}
+
+if [ "$1" == "--help" ]; then
+  usage
+fi
+
+if [ "$3" == only ]; then
+  switch "$GREEN" none
+  switch "$BLUE" none
+  switch "$RED" none
+fi
+
+case "$2" in
+  user) MSG="none" ;;
+  blink) MSG="timer" ;;
+  heartbeat) MSG="heartbeat" ;;
+  fs) MSG="nand-disk" ;;
+  rc-feedback) MSG="rc-feedback" ;;
+  fuelgauge-chrg-or-full) MSG="stc3115_fuelgauge-charging-or-full" ;;
+  fuelgauge-chrg) MSG="stc3115_fuelgauge-charging" ;;
+  fuelgauge-full) MSG="stc3115_fuelgauge-full" ;;
+  fuelgauge-chrg-blink-full-solid) MSG="stc3115_fuelgauge-charging-blink-full-solid" ;;
+  mmc0) MSG="mmc0" ;;
+  mmc1) MSG="mmc1" ;;
+  mmc2) MSG="mmc2" ;;
+  oneshot) MSG="oneshot" ;;
+  backlight) MSG="backlight" ;;
+  gpio) MSG="gpio" ;;
+  rfkill) MSG="rfkill0" ;;
+  *) usage ;;
+esac
+
+case "$1" in
+  all) switch "$GREEN" "$MSG"; switch "$RED" "$MSG"; switch "$BLUE" "$MSG" ;;
+  red) switch "$RED" "$MSG" ;;
+  blue) switch "$BLUE" "$MSG" ;;
+  green) switch "$GREEN" "$MSG"  ;;
+  *) usage ;;
+esac

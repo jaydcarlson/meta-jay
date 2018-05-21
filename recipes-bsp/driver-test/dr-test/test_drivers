@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# Author: Fikayo Adetunji, Signetik LLC
+#       : For testing i2c drivers added to the gallant board
+#
+# Licensed under terms of GPLv2
+
+for SCRIPT in /usr/local/driver-test/*
+do
+	if [ -f $SCRIPT -a -x $SCRIPT ]
+	then
+		$SCRIPT
+	fi
+done

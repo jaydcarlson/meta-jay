@@ -1,0 +1,2 @@
+#!/bin/sh
+/usr/sbin/chat -v -t 60 -f /etc/ppp/net-chat

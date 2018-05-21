@@ -1,0 +1,36 @@
+#!/bin/sh
+
+GPIO=/sys/class/gpio
+
+# GPS_WAKEUP is on CSI0_PIXCLK - GPIO5_IO18             146 - input to processor
+# GPS_RESET is on CSI0_VSYNC - GPIO5_IO21                       149
+# GPS_ONOFF is on CSI0_DAT4 - GPIO5_IO22                        150
+
+# Export ON_OFF (GPIO5_IO22) and set as output
+echo 150 > $GPIO/export
+echo out > $GPIO/gpio150/direction
+
+# Export RESET (GPIO5_IO21) and set as output
+echo 149 > $GPIO/export
+# Set RESET high-impedance (open-drain) (non-reset)
+echo in > $GPIO/gpio149/direction
+
+# Drive ON_OFF low
+echo 0 > $GPIO/gpio150/value
+sleep 1
+
+# Pulse reset
+# Drive RESET low (RESET)
+echo out > $GPIO/gpio149/direction
+echo 0 > $GPIO/gpio149/value
+sleep 1
+# Drive RESET high-impedance (open-drain) (non-reset)
+echo in > $GPIO/gpio149/direction
+sleep 1
+
+# Drive ON_OFF high
+echo 1 > $GPIO/gpio150/value
+sleep 1
+# Drive ON_OFF back low                            
+echo 0 > $GPIO/gpio150/value     
+sleep 1

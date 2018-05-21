@@ -1,0 +1,20 @@
+DESCRIPTION = "Add firmware for bcm4339"
+LICENSE = "GPLv2+"
+LIC_FILES_CHKSUM = "file://${THISDIR}/license;md5=8cf8463b34caa8ac871a52d5dd7ad1ef"
+
+PACKAGE_ARCH = "${MACHINE_ARCH}"
+
+PR = "r4+gitr${SRCPV}"
+
+SRC_URI = "file://brcmfmac4335-sdio.txt \
+                file://brcmfmac4335-sdio.bin"
+
+do_compile() {
+    :
+}
+
+do_install() {
+    oe_runmake 'DEST_DIR=${D}' install
+}
+
+FILES_${PN} = "/lib/firmware/bcrm/*"

@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# Author: Fikayo Adetunji, Signetik LLC
+#       : For upload sensor data from the gallant board to the cloud
+#
+# Licensed under terms of GPLv2
+
+while [ 1 ];
+do
+	sleep 10
+	/etc/updatesensordata
+done

@@ -1,0 +1,31 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          gemalto
+# Required-Start:    
+# Required-Stop:     $local_fs
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: 
+# Description:       
+#                    
+### END INIT INFO
+#
+
+INIT=/usr/local/cellular/init.sh 
+[ ! -x ${INIT} ] && exit 0
+
+[ -f /etc/default/rcS ] && . /etc/default/rcS
+
+case "$1" in
+        start)  
+		${INIT}
+		exit 0;
+                ;;
+	stop)
+		exit 0
+                ;;
+        *)
+                echo "Usage: gemalto {start|stop}" >&2
+                exit 1
+                ;;
+esac

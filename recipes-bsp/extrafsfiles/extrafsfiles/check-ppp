@@ -1,0 +1,14 @@
+#!/bin/sh
+
+SITE=www.google.com
+ping -c 1 $SITE > /dev/null 2>&1 && exit 0
+ping -c 1 $SITE > /dev/null 2>&1 && exit 0
+ping -c 1 $SITE > /dev/null 2>&1 && exit 0
+
+echo "Ping failed. Restarting connection"
+
+/etc/init.d/ppp stop
+
+sleep 5
+
+/etc/init.d/ppp start

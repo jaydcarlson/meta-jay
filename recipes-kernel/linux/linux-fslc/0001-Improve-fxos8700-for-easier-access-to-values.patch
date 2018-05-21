@@ -1,0 +1,59 @@
+From 6fa5bfbb4de245ddc90106df460350d28df69e0a Mon Sep 17 00:00:00 2001
+From: Steve Poulsen <spoulsen@signetik.com>
+Date: Sat, 28 May 2016 19:56:30 -0500
+Subject: [PATCH] Improve fxos8700 for easier access to values
+
+---
+ drivers/input/misc/fxos8700.c | 28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
+
+diff --git a/drivers/input/misc/fxos8700.c b/drivers/input/misc/fxos8700.c
+index da52c02..ee1c3f9 100644
+--- a/drivers/input/misc/fxos8700.c
++++ b/drivers/input/misc/fxos8700.c
+@@ -620,14 +620,42 @@ static ssize_t fxos8700_position_store(struct device *dev,
+ 	return count;
+ }
+ 
++static ssize_t fxos8700_reading_show(struct device *dev,
++				   struct device_attribute *attr, char *buf)
++{
++	struct input_polled_dev *poll_dev = dev_get_drvdata(dev);
++	struct fxos8700_data *pdata = (struct fxos8700_data *)(poll_dev->private);
++	int position;
++	int type;
++	struct i2c_client * client = pdata->client;
++	struct fxos8700_data_axis data;
++
++	mutex_lock(&pdata->data_lock);
++	position = pdata->position ;
++	mutex_unlock(&pdata->data_lock);
++
++	if(poll_dev == pdata->acc_poll_dev)
++		type = FXOS8700_TYPE_ACC;
++	if(poll_dev == pdata->mag_poll_dev)
++		type = FXOS8700_TYPE_MAG;
++
++	fxos8700_read_data(client,&data,type);
++	fxos8700_data_convert(&data,pdata->position);
++
++	return sprintf(buf, "%d,%d,%d\n", data.x, data.y, data.z);
++}
++
+ static DEVICE_ATTR(enable, S_IWUSR | S_IRUGO,
+ 		   fxos8700_enable_show, fxos8700_enable_store);
+ static DEVICE_ATTR(position, S_IWUSR | S_IRUGO,
+ 		   fxos8700_position_show, fxos8700_position_store);
++static DEVICE_ATTR(reading, S_IRUGO,
++		   fxos8700_reading_show, NULL);
+ 
+ static struct attribute *fxos8700_attributes[] = {
+ 	&dev_attr_enable.attr,
+ 	&dev_attr_position.attr,
++	&dev_attr_reading.attr,
+ 	NULL
+ };
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,25 @@
+#!/bin/sh
+
+CHECKER=/usr/local/watchdog/processcheck
+FIXER=/usr/local/watchdog/restartprocess
+SUCCESS="IS RUNNING"
+FAILURE="NOT RUNNING"
+
+result=0
+
+# Check intellifarm.sh
+ret=`$CHECKER intellifarm.sh /etc/init.d/intellifarm.sh`
+if [[ $ret == *$FAILURE* ]]; then
+  ret=`$FIXER intellifarm.sh /etc/init.d/intellifarm.sh`
+  result = $(( $result + 1 ))
+fi
+
+# Check gallant.sh
+ret=`$CHECKER gallant.sh /etc/init.d/gallant.sh`
+if [[ $ret == *$FAILURE* ]]; then
+  ret=`$FIXER intellifarm.sh /etc/init.d/gallant.sh`
+  result = $(( $result + 1 ))
+fi
+
+
+exit $result

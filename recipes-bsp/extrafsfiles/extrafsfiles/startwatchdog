@@ -1,0 +1,10 @@
+#!/bin/sh
+
+prog=watchdog
+
+sleep 600
+if [ "$1" = "yes" ]; then
+	/usr/sbin/${prog} -v
+else
+	/usr/sbin/${prog}
+fi

@@ -1,0 +1,25 @@
+From b2ec03b18895c38a9ec6db4e0d69f38dedaa90c3 Mon Sep 17 00:00:00 2001
+From: Fikayo Adetunji <fadetunji@signetik.com>
+Date: Fri, 1 Jul 2016 15:56:22 -0500
+Subject: [PATCH] Disable stc3115 power sleep due to crash
+
+---
+ drivers/power/stc3115_battery.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/power/stc3115_battery.c b/drivers/power/stc3115_battery.c
+index d9fd07c..ac56bf5 100644
+--- a/drivers/power/stc3115_battery.c
++++ b/drivers/power/stc3115_battery.c
+@@ -1953,7 +1953,7 @@ MODULE_DEVICE_TABLE(i2c, stc311x_id);
+ static struct i2c_driver stc311x_i2c_driver = {
+ 		.driver = {
+ 				.name = "stc3115",
+-#ifdef CONFIG_PM
++#if(0)
+ 				.pm = &stc311x_pm_ops,
+ #endif
+ 		},
+-- 
+2.7.4
+

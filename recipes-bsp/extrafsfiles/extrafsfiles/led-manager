@@ -1,0 +1,58 @@
+#!/bin/bash
+
+GREEN="green"
+RED="red"
+BLUE="blue"
+
+usage()
+{
+  echo "USAGE: $0 [device|--help] [state]"
+  exit 1
+}
+
+createfile()
+{
+  mkdir -p /tmp/led-manager
+  echo "0" > "/tmp/led-manager/$1"
+}
+
+updatefile()
+{
+  echo "$1" > "/tmp/led-manager/$2"
+}
+
+switch()
+{
+  /usr/local/bin/led-control $1 $2 $3
+}
+
+if [ $# -lt 1 ]
+then
+  createfile "cellular"
+  exit
+fi
+
+if [ "$1" == "--help" ]; then
+  usage
+  exit
+fi
+
+# Determine color of led by device
+case "$1" in
+  cellular) COLOR="$GREEN" ;;
+  device) COLOR="$RED" ;;
+  *) usage ;;
+esac
+
+# Determine led-state by device-state
+case "$2" in
+  connected) STATE="blink" 
+             switch $COLOR $STATE only
+             updatefile "10" "cellular"
+             ;;
+  shutdown) STATE="blink"
+            switch $COLOR $STATE only
+            ;;
+  *) usage ;;
+esac
+~                                            

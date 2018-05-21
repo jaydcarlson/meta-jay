@@ -1,0 +1,77 @@
+#!/bin/sh
+
+# I2C bus number
+I2CBUS=0
+
+# server address
+SERVER="http://52.36.201.28/updateSensorData?"
+
+# Get the sensor values to be sent
+dev_id="1234"
+si7006_temp=`find /sys/bus/i2c/devices/${I2CBUS}-0040/ -name 'temp1_input' -exec cat {} \;`
+si7006_humidity=`find /sys/bus/i2c/devices/${I2CBUS}-0040/ -name 'humidity1_input' -exec cat {} \;`
+fxos8700_accel=`cat /sys/devices/virtual/input/input0/position`
+fxos8700_magne=`cat /sys/devices/virtual/input/input1/position`
+bmp280_temp=`find /sys/devices/virtual/input/ -name 'temperature' -exec cat {} \;`
+bmp280_press=`find /sys/devices/virtual/input/ -name 'pressure' -exec cat {} \;`
+ltr303_illum=`find /sys/bus/i2c/devices/${I2CBUS}-0029/ -name 'lux_adc' -exec cat {} \;`
+veml6070_illum=`find /sys/bus/i2c/devices/${I2CBUS}-0038/ -name 'in_illuminance_irradiance_raw' -exec cat {} \;`
+veml6070_risk=`find /sys/bus/i2c/devices/${I2CBUS}-0038/ -name 'uv_risk' -exec cat {} \;`
+
+# Check the validity of the values
+if ! [[ $si7006_temp =~ ^-?[0-9]+$ ]]
+then
+	si7006_temp="ERROR"
+fi
+
+if ! [[ $si7006_humidity =~ ^-?[0-9]+$ ]]
+then
+	si7006_humidity="ERROR"
+fi
+
+if ! [[ $fxos8700_accel =~ ^-?[0-9]+$ ]]
+then
+	fxos8700_accel="ERROR"
+fi
+
+if ! [[ $fxos8700_magne =~ ^-?[0-9]+$ ]]
+then
+	fxos8700_magne="ERROR"
+fi
+
+if ! [[ $bmp280_temp =~ ^-?[0-9]+$ ]]
+then
+	bmp280_temp="ERROR"
+fi
+
+if ! [[ $bmp280_press =~ ^-?[0-9]+$ ]]
+then
+	bmp280_press="ERROR"
+fi
+
+if ! [[ $ltr303_illum =~ ^-?[0-9]+$ ]]
+then
+	ltr303_illum="ERROR"
+fi
+
+if ! [[ $veml6070_illum =~ ^[0-9]+(\.[0-9]+)?$ ]]
+then
+	veml6070_illum="ERROR"
+fi
+
+if ! [[ $veml6070_risk = "low" || $veml6070_risk = "moderate" || $veml6070_risk = "high" || $veml6070_risk = "very high" || $veml6070_risk = "extreme" ]]
+then
+	veml6070_risk="ERROR"
+fi
+
+none="none"
+
+
+# Build the update URL
+request="${SERVER}deviceId=${dev_id}&Si7006Temperature=${si7006_temp}&Si7006Humidity=${si7006_humidity}&Fxos8700Accelerometer=${fxos8700_accel}&Fxos8700Magnetometer=${fxos8700_magne}&Bmp280Temperature=${bmp280_temp}&Bmp280Pressure=${bmp280_press}&Ltr303Illuminance=${ltr303_illum}&Ltr303Intensity=${none}&Veml6070Illuminance=${veml6070_illum}&Veml6070UvRisk=${veml6070_risk}"
+printf "REQUEST: ${request}" > /var/log/sensorrequest
+
+# Send the sensor data
+temp=`wget -O short_name.ext "${request}"`
+
+#echo $temp

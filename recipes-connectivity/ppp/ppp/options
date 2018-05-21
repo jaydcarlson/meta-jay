@@ -1,0 +1,9 @@
+lock
+debug
+115200
+/dev/ttymxc1
+connect /etc/ppp/net-connect
+local
+defaultroute
+kdebug 1
+noauth

@@ -1,0 +1,13 @@
+#!/bin/sh
+
+if [ -e "/lib/firmware/brcm/brcmfmac4339-sdio.txt" ];
+then
+	mount / -o remount,rw
+        mv /lib/firmware/brcm/brcmfmac4339-sdio.bin /lib/firmware/brcm/brcmfmac4335-sdio.bin
+        mv /lib/firmware/brcm/brcmfmac4339-sdio.txt /lib/firmware/brcm/brcmfmac4335-sdio.txt
+        reboot
+else
+	sleep 60
+	/usr/local/bin/startwifi
+fi
+

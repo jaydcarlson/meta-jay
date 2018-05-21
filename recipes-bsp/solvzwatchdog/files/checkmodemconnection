@@ -1,0 +1,34 @@
+#!/bin/sh
+
+CHECKER=/usr/local/watchdog/processcheck
+FIXER=/usr/local/watchdog/restartprocess
+SUCCESS="IS RUNNING"
+FAILURE="NOT RUNNING"
+EXTIF="ppp0" # external interface, may be empty
+IFCONFIG=/sbin/ifconfig
+AWK=/usr/bin/awk
+
+result=0
+
+# Check intellifarm.sh
+ret=`$CHECKER pppd /etc/init.d/ppp`
+if [[ $ret == *$FAILURE* ]]; then
+  ret=`$FIXER pppd /etc/init.d/ppp start`
+  result=$(( $result + 1 ))
+fi
+
+if [[ $result -eq 1 ]]; then
+	echo $result
+	exit
+fi
+
+# get the external IP address - it returns empty string if it is not up
+#if [ -n "$EXTIF" ]; then
+#	EXTIP="`$IFCONFIG $EXTIF 2>/dev/null | $AWK \
+#	/$EXTIF/'{next}//{split($0,a,":");split(a[2],a," ");print a[1];exit}'`"
+#fi
+
+# TODO: If $EXTIP is empty, then restart ppp
+#echo " External IP: $EXTIP"
+echo $result
+exit

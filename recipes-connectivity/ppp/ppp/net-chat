@@ -1,0 +1,15 @@
+# Will need to be edited based on our modem information
+
+ABORT   "BUSY"
+ABORT   "NO CARRIER"
+REPORT  CONNECT
+""      AT
+""      AT
+OK      AT&F
+OK      AT&D2&C1
+OK	AT\^SCFG="CDMA/TetheredNai","disabled"
+SAY     "Calling myisp\n"
+TIMEOUT 60
+OK      AT\^SDPORT=2
+OK      ATD#777
+CONNECT \c

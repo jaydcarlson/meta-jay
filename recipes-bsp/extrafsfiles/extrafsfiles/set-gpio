@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Do some basic checks
+if [ "$1" = "" ]
+then
+  echo "Usage: $0 (#gpio) (in|out) (0|1)"
+  exit 1
+fi
+
+# Check if gpio is already exported
+if [ ! -d /sys/class/gpio/gpio$1 ]
+then
+  echo $1 > /sys/class/gpio/export
+  sleep 1 ;# Short delay while GPIO permissions are set up
+fi
+
+# Set to output
+echo $2 > /sys/class/gpio/gpio$1/direction
+
+# Set to high value
+echo $3 > /sys/class/gpio/gpio$1/value

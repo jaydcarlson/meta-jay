@@ -1,0 +1,21 @@
+#!/bin/sh
+
+NAME=$1
+START=$2
+GREP=/bin/grep
+PS=/bin/ps
+NOP=/bin/true
+DATE=/bin/date
+RM=/bin/rm
+WC=/usr/bin/wc
+
+ret=$( $PS|$GREP -v grep|$GREP -v $0|$GREP $NAME|$WC -l )
+
+if [ $ret -eq 1 ];
+then
+   echo "IS RUNNING"
+else
+   echo "NOT RUNNING"
+fi
+
+exit
